@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>搵樓 CP 神器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        /* 增加一些手機 App 的質感 */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+        .ios-input { transition: all 0.2s; }
+        .ios-input:focus { transform: scale(1.01); }
+        .score-gradient { background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%); }
+        .score-gradient-high { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 pb-10">
+
+<div id="app" class="max-w-md mx-auto min-h-screen flex flex-col relative">
+
+    <header class="pt-8 pb-4 px-6 bg-white sticky top-0 z-10 shadow-sm/50 backdrop-blur-md bg-opacity-90">
+        <div class="flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">搵樓 CP 神器</h1>
+                <p class="text-xs text-slate-500 font-medium mt-1">理性分析，拒絕做水魚</p>
+            </div>
+            <button @click="clearAll" class="text-xs text-red-500 font-medium bg-red-50 px-3 py-1 rounded-full">清空</button>
+        </div>
+    </header>
+
+    <div class="px-4 mt-4 mb-6">
+        <div class="bg-white rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+            
+            <div class="mb-4">
+                <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">樓盤名稱</label>
+                <input v-model="form.name" type="text" placeholder="例如：太古城 2房" 
+                    class="ios-input w-full bg-slate-50 text-lg font-medium text-slate-900 placeholder-slate-300 border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-blue-500/20 focus:bg-white outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 mb-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">總價 (萬)</label>
+                    <input v-model.number="form.price" type="number" placeholder="600" 
+                        class="ios-input w-full bg-slate-50 text-lg font-bold text-slate-900 border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">面積 (呎)</label>
+                    <input v-model.number="form.size" type="number" placeholder="400" 
+                        class="ios-input w-full bg-slate-50 text-lg font-bold text-slate-900 border-none rounded-xl py-3 px-4 focus:ring-2 focus:ring-blue-500/20 outline-none">
+                </div>
+            </div>
+
+            <div class="mb-5">
+                <div class="flex justify-between mb-2">
+                    <label class="text-xs font-bold text-slate-400 uppercase">裝修狀況</label>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-600">{{ form.reno }} 分</span>
+                </div>
+                <input v-model.number="form.reno" type="range" min="0" max="10" step="1" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+                <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+                    <span>全爆</span>
+                    <span>即住</span>
+                </div>
+            </div>
+
+            <div class="mb-6">
+                <div class="flex justify-between mb-2">
+                    <label class="text-xs font-bold text-slate-400 uppercase">景觀質素</label>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded bg-purple-50 text-purple-600">{{ form.view }} 分</span>
+                </div>
+                <input v-model.number="form.view" type="range" min="0" max="10" step="1" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-purple-600">
+                <div class="flex justify-between text-[10px] text-slate-400 mt-1">
+                    <span>面壁</span>
+                    <span>全海</span>
+                </div>
+            </div>
+
+            <button @click="addProperty" 
+                class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-4 rounded-2xl shadow-lg shadow-slate-900/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                <i class="ph ph-calculator text-xl"></i>
+                立即分析
+            </button>
+        </div>
+    </div>
+
+    <div class="px-4 flex-1">
+        <div v-if="properties.length > 0" class="flex justify-between items-end mb-3 px-2">
+            <h3 class="font-bold text-lg text-slate-800">排行榜</h3>
+            <span class="text-xs text-slate-400">已計算 {{ properties.length }} 個盤</span>
+        </div>
+
+        <div class="space-y-3">
+            <div v-for="(item, index) in sortedProperties" :key="item.id" 
+                class="group bg-white rounded-2xl p-5 shadow-sm border border-slate-100 relative overflow-hidden transition-all hover:shadow-md">
+                
+                <div v-if="index === 0" class="absolute -right-4 -top-4 w-16 h-16 bg-yellow-400/20 rounded-full flex items-end justify-start pl-3 pb-3">
+                    <i class="ph-fill ph-crown text-yellow-500 text-xl"></i>
+                </div>
+
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h4 class="font-bold text-lg text-slate-900 mb-1">{{ item.name }}</h4>
+                        <div class="flex gap-2 text-xs font-medium text-slate-500 mb-2">
+                            <span class="bg-slate-100 px-2 py-1 rounded-md">{{ item.size }}呎</span>
+                            <span class="bg-slate-100 px-2 py-1 rounded-md">{{ item.reno }} 裝修</span>
+                            <span class="bg-slate-100 px-2 py-1 rounded-md">{{ item.view }} 景觀</span>
+                        </div>
+                        <div class="text-sm font-semibold text-slate-700">
+                            ${{ item.price }}萬 <span class="text-slate-400 text-xs font-normal">(@${{ item.sqPrice }}/呎)</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col items-end gap-3">
+                        <div :class="['w-14 h-14 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg', index === 0 ? 'score-gradient-high' : 'score-gradient']">
+                            <span class="text-xl font-bold leading-none">{{ item.score }}</span>
+                            <span class="text-[9px] opacity-90">CP值</span>
+                        </div>
+                        <button @click="removeProperty(item.id)" class="text-slate-300 hover:text-red-500 p-1">
+                            <i class="ph ph-trash text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div v-if="properties.length === 0" class="text-center py-10 opacity-50">
+                <i class="ph ph-house-line text-4xl text-slate-300 mb-2"></i>
+                <p class="text-sm text-slate-400">輸入資料開始比較</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, computed, onMounted, watch } = Vue;
+
+    createApp({
+        setup() {
+            // 表單數據
+            const form = ref({
+                name: '',
+                price: null,
+                size: null,
+                reno: 5,
+                view: 5
+            });
+
+            // 樓盤列表
+            const properties = ref([]);
+
+            // 初始化：從 LocalStorage 讀取舊資料
+            onMounted(() => {
+                const saved = localStorage.getItem('myHouseData');
+                if (saved) {
+                    properties.value = JSON.parse(saved);
+                }
+            });
+
+            // 監聽：資料變動時自動存檔
+            watch(properties, (newVal) => {
+                localStorage.setItem('myHouseData', JSON.stringify(newVal));
+            }, { deep: true });
+
+            // 核心功能：加入樓盤
+            const addProperty = () => {
+                if (!form.value.price || !form.value.size) {
+                    alert('請最少輸入價錢同面積！');
+                    return;
+                }
+
+                const price = parseFloat(form.value.price);
+                const size = parseFloat(form.value.size);
+                const reno = parseFloat(form.value.reno);
+                const view = parseFloat(form.value.view);
+                
+                // 計算呎價
+                const sqPrice = Math.round((price * 10000) / size);
+
+                // --- CP值 演算法 (可在此調整) ---
+                // 1. 呎價分 (基準 $15000): 越平越高分
+                // 2. 裝修 & 景觀: 直接加權
+                let baseScore = 50; 
+                let priceBonus = (15000 - sqPrice) / 250; // 每平過 $250 加 1分
+                let qualityBonus = (reno * 1.5) + (view * 1.5); // 裝修景觀佔重
+
+                let finalScore = baseScore + priceBonus + qualityBonus;
+                // 限制分數 0-100 之間，並取小數點後1位
+                finalScore = Math.max(0, Math.min(100, finalScore)).toFixed(1);
+
+                properties.value.push({
+                    id: Date.now(),
+                    name: form.value.name || '未命名樓盤',
+                    price: price,
+                    size: size,
+                    reno: reno,
+                    view: view,
+                    sqPrice: sqPrice,
+                    score: finalScore
+                });
+
+                // 重置表單 (保留裝修/景觀設定，方便連續輸入同類盤)
+                form.value.name = '';
+                form.value.price = null;
+                form.value.size = null;
+            };
+
+            // 排序：分數高至低
+            const sortedProperties = computed(() => {
+                return [...properties.value].sort((a, b) => b.score - a.score);
+            });
+
+            const removeProperty = (id) => {
+                if(confirm('確定刪除這個盤？')) {
+                    properties.value = properties.value.filter(p => p.id !== id);
+                }
+            };
+
+            const clearAll = () => {
+                if(confirm('確定清空所有資料？')) {
+                    properties.value = [];
+                }
+            }
+
+            return {
+                form,
+                properties,
+                sortedProperties,
+                addProperty,
+                removeProperty,
+                clearAll
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>
